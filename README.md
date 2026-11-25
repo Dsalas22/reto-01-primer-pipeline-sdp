@@ -71,9 +71,22 @@ Los archivos de `datos/` son muestras de referencia equivalentes; no los subas s
 
 6. **Explica el diseño.** Indica por qué la ingesta es una streaming table, por qué el indicador es una vista materializada y cómo SDP determina el orden.
 
-## Programación opcional
+## Ingesta sintética cada 3 minutos
 
-Después de completar las comprobaciones, crea otro Job `job_programado_reto01_dsh` con el mismo notebook y parámetros del Job `sufijo = dsh`, `lote = continuo`. Cada ejecución genera un evento y archivo nuevos con identificadores ficticios únicos; las cantidades de la prueba inicial dejarán de aplicar. Añade una tarea **Pipeline** que dependa de la tarea de ingesta y seleccione `pipeline_reto01_dsh`; usa actualización normal, no full refresh. Configura una programación con concurrencia máxima 1, inicialmente pausada. Actívala solo para la prueba, observa las ejecuciones y vuelve a pausarla. Una actualización programada aproxima near real-time, sin garantía de latencia, y genera costos. Reintentar una ejecución puede generar otro evento nuevo: no se garantiza deduplicación de negocio.
+Después de completar las comprobaciones manuales:
+
+1. Crea otro Job `job_programado_reto01_dsh` con una tarea **Notebook** llamada `generar_datos` que use `ingesta/generador.py`.
+2. En los **parámetros del Job**, configura `sufijo = dsh`, `lote = continuo` y `registros = 500`. Sustituye el sufijo; no dupliques parámetros en la tarea. `registros` solo aplica a `continuo`, acepta enteros de **1 a 500** y vale 500 por defecto. Un valor inválido hace fallar la tarea antes de escribir.
+3. Añade una tarea **Pipeline** llamada `transformar_datos`, dependiente del **éxito** de `generar_datos`, y selecciona `pipeline_reto01_dsh`. Usa actualización normal, **no full refresh**.
+4. En **Add trigger → Scheduled → Advanced → Show Cron Syntax**, configura la expresión Quartz `0 0/3 * * * ?` y zona horaria `UTC`: minutos 00, 03, 06, etc. Guarda la programación inicialmente **pausada**.
+5. Configura concurrencia máxima **1**, desactiva **Queue** y deja los reintentos automáticos de la tarea generadora en **0**. Si una ejecución dura más de 3 minutos, las siguientes pueden omitirse mientras sigue activa; no se superponen ni se acumulan. No se garantiza una ingesta exactamente cada 3 minutos.
+6. Ejecuta **Run now** para verificar permisos y la cadena Notebook → Pipeline. Después activa la programación, observa algunas ejecuciones y vuelve a **pausarla** al terminar.
+
+Cada ejecución exitosa del generador escribe **un archivo JSON Lines nuevo con 500 eventos** (o la cantidad elegida), sin sobrescribir. Los identificadores de evento, persona y archivo se generan con UUID e índice. Las aeronaves, países y velocidades varían usando solo valores dummy; no hay conexión a fuentes reales. Los lotes fijos `lote_01` no cambian.
+
+Para comprobar la ingesta, revisa la ruta y el número de eventos en la salida del notebook y vuelve a ejecutar las consultas de validación. Con `registros = 500`, cada nueva ejecución exitosa seguida de su actualización normal agrega 500 eventos a Bronze; una actualización del pipeline **sin ejecutar el generador** no agrega eventos. Los indicadores se recalculan sobre los datos acumulados y ya no deben compararse con 3, 2 y 300.
+
+El límite de 500 es **por ejecución del generador**, no para el total acumulado en Delta. Los reintentos manuales pueden producir otro lote; no se garantiza deduplicación de negocio. Esta programación aproxima near real-time, sin garantía de latencia: el planificador y el cómputo pueden retrasar ejecuciones y generan costos. Este repositorio no crea ni activa Jobs automáticamente; configura y valida la programación en tu workspace.
 
 ## Entregables y evaluación
 
@@ -89,5 +102,6 @@ Después de completar las comprobaciones, crea otro Job `job_programado_reto01_d
 - [Configuración de parámetros en Python](https://docs.databricks.com/aws/en/ldp/parameters)
 - [Tareas notebook en Jobs](https://docs.databricks.com/aws/en/jobs/tasks/notebook)
 - [Tareas pipeline en Jobs](https://docs.databricks.com/aws/en/jobs/tasks/pipeline)
+- [Programar Jobs](https://docs.databricks.com/aws/en/jobs/scheduled)
 
 La solución es una referencia para el facilitador o para consultar después del intento. Las vistas materializadas pueden actualizarse incrementalmente cuando son compatibles o recalcularse según el plan de ejecución.
