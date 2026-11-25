@@ -95,6 +95,22 @@ El límite de 500 es **por ejecución del generador**, no para el total acumulad
 - Aprobación: ejecución exitosa, grafo correcto y los tres indicadores esperados.
 - Reflexión: ¿qué cambiarías para separar datos de pruebas de datos reales?
 
+## Videos tutoriales en español
+
+Ruta de estudio sugerida; los videos son material de apoyo, no sustituyen el paso a paso. Las duraciones son aproximadas y no están incluidas en la duración del reto. Enlaces y disponibilidad revisados el **25 de noviembre de 2026**; YouTube requiere conexión a Internet.
+
+| Orden y video | Canal / duración | Qué estudiar y cómo aplicarlo |
+|---|---|---|
+| 1. [Introduction to Delta and Lakehouse — Workshop Práctico](https://www.youtube.com/watch?v=a9nZfTBatgc) | Databricks America Latina · 97 min · español, aunque el título está en inglés | Fundamentos de Delta Lake, tablas y procesamiento batch/streaming. Úsalo antes de crear Bronze y consultar sus indicadores. |
+| 2. [Lakeflow: Declarative Pipelines & Connect — Workshop Práctico](https://www.youtube.com/watch?v=6ISOHWFoK8w) | Databricks America Latina · 104 min · español | Introducción práctica a pipelines declarativos y ETL. Concéntrate en la creación del pipeline y sus dependencias; Connect, CDC y los temas avanzados no son requisitos del reto. |
+| 3. [Lakeflow Jobs en Databricks: Tasks, dependencias y parámetros](https://www.youtube.com/watch?v=CggUSoJ3fDQ) | EDUCATRONICOS ISC · 33 min · español | Crear un Job, ejecutar con Run now y pasar parámetros. Para la extensión, identifica la dependencia entre la tarea generadora y la tarea Pipeline. |
+
+Para la extensión cada 3 minutos, consulta también [Lakeflow Jobs Parte 2: Triggers y Scheduled](https://www.youtube.com/watch?v=mXLtzno4tqo), de **EDUCATRONICOS ISC** (14 min, español). Estudia Scheduled; File Arrival y un notebook como orquestador son alternativas, no la configuración de este laboratorio.
+
+**Compatibilidad y seguridad:** algunos videos usan el nombre anterior **Delta Live Tables (DLT)**, otras interfaces o ETL con notebooks. En este reto usa `from pyspark import pipelines as dp`, los decoradores de `solucion/pipeline.py`, Unity Catalog y `/Volumes/` como indica esta guía. El Job coordina tareas; SDP coordina datasets. No copies credenciales ni cargues datasets externos: conserva el generador dummy, tu sufijo y el límite de 500 registros por ejecución.
+
+**Comprobación de estudio:** explica qué diferencia hay entre una streaming table y una vista materializada, y qué orden controla el Job frente al que determina SDP.
+
 ## Referencias
 
 - [Tutorial oficial de pipelines](https://docs.databricks.com/aws/en/getting-started/data-pipeline-get-started)
