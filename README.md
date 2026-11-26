@@ -5,7 +5,7 @@
 
 ## Objetivo
 
-Crear un Job que genere eventos ficticios y un pipeline de Lakeflow Spark Declarative Pipelines que los lleve por tres capas fijas: **Bronce** (`raw_data.bronze`), **Plata** modelada como **Data Vault** (`data_vault.plata`) y **Oro** (`ods.gold`). No se conecta a una fuente real y no creas catálogos, esquemas ni volúmenes.
+Crear un Job que genere eventos ficticios y un pipeline de Lakeflow Spark Declarative Pipelines que los lleve por tres capas fijas: **Bronce** (`raw_data.bronze`), **Plata** modelada como **Data Vault** (`data_vault.silver`) y **Oro** (`ods.gold`). No se conecta a una fuente real y no creas catálogos, esquemas ni volúmenes.
 
 ## Resultado esperado
 
@@ -18,8 +18,8 @@ Con `lote_01`: Bronce 3 filas, hub 3, satélite 3; en Oro, 3 eventos, 2 aeronave
 | Aterrizaje | `/Volumes/raw_data/bronze/landing_retos_sdp/dsh/reto01/entrada` | Carpeta en volumen compartido | Archivos JSON del generador |
 | Bronce | `raw_data.bronze.r01_vuelos_raw_dsh` | Streaming table (Auto Loader) | El dato tal como llega + `archivo_origen`, `fecha_archivo`, `fecha_ingesta` |
 | Staging | `r01_stg_vuelos_dsh` | Vista temporal privada (no se publica) | Calcula hash key, hashdiff, `fecha_carga` y `fuente_registro` |
-| Plata | `data_vault.plata.r01_hub_vuelo_dsh` | Streaming table | Hub: una fila por `evento_id` |
-| Plata | `data_vault.plata.r01_sat_vuelo_dsh` | Streaming table | Satélite: aeronave, país, velocidad y persona del vuelo |
+| Plata | `data_vault.silver.r01_hub_vuelo_dsh` | Streaming table | Hub: una fila por `evento_id` |
+| Plata | `data_vault.silver.r01_sat_vuelo_dsh` | Streaming table | Satélite: aeronave, país, velocidad y persona del vuelo |
 | Oro | `ods.gold.r01_indicadores_vuelos_dsh` | Vista materializada | Eventos, aeronaves distintas y velocidad máxima |
 
 ## Data Vault en pocas palabras
@@ -43,7 +43,7 @@ En este reto los eventos son inmutables y llegan una sola vez, por eso hub y sat
 
 ## Preparación del instructor (una vez)
 
-Los catálogos `raw_data`, `data_vault` y `ods` y los esquemas `raw_data.bronze`, `data_vault.plata` y `ods.gold` ya existen. El instructor crea el volumen compartido y otorga los permisos una sola vez; sirven para los tres retos. Sustituye `participantes` por el grupo de participantes (recomendado) o por un correo:
+Los catálogos `raw_data`, `data_vault` y `ods` y los esquemas `raw_data.bronze`, `data_vault.silver` y `ods.gold` ya existen. El instructor crea el volumen compartido y otorga los permisos una sola vez; sirven para los tres retos. Sustituye `participantes` por el grupo de participantes (recomendado) o por un correo:
 
 ```sql
 CREATE VOLUME IF NOT EXISTS raw_data.bronze.landing_retos_sdp;
@@ -53,7 +53,7 @@ GRANT USE CATALOG ON CATALOG data_vault TO `participantes`;
 GRANT USE CATALOG ON CATALOG ods        TO `participantes`;
 
 GRANT USE SCHEMA, CREATE TABLE, SELECT ON SCHEMA raw_data.bronze  TO `participantes`;
-GRANT USE SCHEMA, CREATE TABLE, SELECT ON SCHEMA data_vault.plata TO `participantes`;
+GRANT USE SCHEMA, CREATE TABLE, SELECT ON SCHEMA data_vault.silver TO `participantes`;
 GRANT USE SCHEMA, CREATE MATERIALIZED VIEW, SELECT ON SCHEMA ods.gold TO `participantes`;
 
 GRANT READ VOLUME, WRITE VOLUME ON VOLUME raw_data.bronze.landing_retos_sdp TO `participantes`;
@@ -86,7 +86,7 @@ Los archivos de `datos/` son muestras de referencia equivalentes; no los subas s
 
 2. **Crea el código.** En el workspace crea un archivo Python llamado `pipeline.py` con el contenido de `solucion/pipeline.py`. Si trabajas con Git folders, puedes importar este repositorio y usar directamente ese archivo. Identifica qué función crea cada dataset, en qué capa se publica y cómo se calculan las hash keys.
 
-3. **Configura el pipeline.** Crea un pipeline Lakeflow llamado `pipeline_reto01_dsh`, selecciona el catálogo `raw_data` y el esquema `bronze` como destino por defecto, agrega el archivo Python como código fuente y selecciona ejecución **triggered**. Plata y Oro se publican en `data_vault.plata` y `ods.gold` porque el código usa el nombre completo de cada tabla. En **Settings → Configuration** agrega solo `pipelines.suffix = dsh`; el código rechaza un sufijo ausente o que no tenga exactamente tres letras. Las claves opcionales `raw_catalog`, `raw_schema`, `silver_catalog`, `silver_schema`, `gold_catalog`, `gold_schema` y `landing_volume` ya tienen los valores por defecto `raw_data`, `bronze`, `data_vault`, `plata`, `ods`, `gold` y `landing_retos_sdp`; cámbialas solo si el instructor lo indica.
+3. **Configura el pipeline.** Crea un pipeline Lakeflow llamado `pipeline_reto01_dsh`, selecciona el catálogo `raw_data` y el esquema `bronze` como destino por defecto, agrega el archivo Python como código fuente y selecciona ejecución **triggered**. Plata y Oro se publican en `data_vault.silver` y `ods.gold` porque el código usa el nombre completo de cada tabla. En **Settings → Configuration** agrega solo `pipelines.suffix = dsh`; el código rechaza un sufijo ausente o que no tenga exactamente tres letras. Las claves opcionales `raw_catalog`, `raw_schema`, `silver_catalog`, `silver_schema`, `gold_catalog`, `gold_schema` y `landing_volume` ya tienen los valores por defecto `raw_data`, `bronze`, `data_vault`, `silver`, `ods`, `gold` y `landing_retos_sdp`; cámbialas solo si el instructor lo indica.
 
 4. **Ejecuta y observa.** Inicia una actualización normal, espera a que termine correctamente y revisa el grafo: Bronce alimenta el staging, el staging alimenta hub y satélite, y el satélite alimenta Oro. Si falla, consulta el mensaje de error antes de continuar.
 
@@ -94,8 +94,8 @@ Los archivos de `datos/` son muestras de referencia equivalentes; no los subas s
 
    ```sql
    SELECT COUNT(*) AS filas_bronce FROM raw_data.bronze.r01_vuelos_raw_dsh;
-   SELECT COUNT(*) AS filas_hub    FROM data_vault.plata.r01_hub_vuelo_dsh;
-   SELECT COUNT(*) AS filas_sat    FROM data_vault.plata.r01_sat_vuelo_dsh;
+   SELECT COUNT(*) AS filas_hub    FROM data_vault.silver.r01_hub_vuelo_dsh;
+   SELECT COUNT(*) AS filas_sat    FROM data_vault.silver.r01_sat_vuelo_dsh;
    SELECT * FROM ods.gold.r01_indicadores_vuelos_dsh;
 
    -- Columnas técnicas de Bronce
@@ -104,13 +104,13 @@ Los archivos de `datos/` son muestras de referencia equivalentes; no los subas s
 
    -- Hub y satélite se unen por la hash key
    SELECT h.evento_id, s.aeronave_id, s.velocidad_kmh, s.persona_alias, s.hashdiff
-   FROM data_vault.plata.r01_hub_vuelo_dsh h
-   JOIN data_vault.plata.r01_sat_vuelo_dsh s USING (hk_vuelo)
+   FROM data_vault.silver.r01_hub_vuelo_dsh h
+   JOIN data_vault.silver.r01_sat_vuelo_dsh s USING (hk_vuelo)
    ORDER BY h.evento_id;
 
    -- La hash key es el SHA-256 de la llave normalizada
    SELECT evento_id, hk_vuelo = sha2(upper(trim(evento_id)), 256) AS hash_correcto
-   FROM data_vault.plata.r01_hub_vuelo_dsh;
+   FROM data_vault.silver.r01_hub_vuelo_dsh;
    ```
 
    Resultados esperados: 3 filas en Bronce, 3 en el hub y 3 en el satélite; Oro con `eventos = 3`, `aeronaves = 2` y `velocidad_maxima = 300`; el join devuelve `e1`–`e3` y `hash_correcto` es `true` en las tres filas.
